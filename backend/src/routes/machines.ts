@@ -3,6 +3,20 @@ import { getMachines, addMachine, removeMachine, setLocalMachineName } from '../
 
 const router = Router();
 
+function isValidMachineUrl(raw: string): boolean {
+  let u: URL;
+  try { u = new URL(raw); } catch { return false; }
+  if (!['http:', 'https:'].includes(u.protocol)) return false;
+  const h = u.hostname.toLowerCase();
+  // Block localhost variants
+  if (['localhost', '127.0.0.1', '::1', '0.0.0.0'].includes(h)) return false;
+  // Block cloud metadata endpoints
+  if (h === '169.254.169.254') return false;
+  // Block private IP ranges (RFC 1918 + link-local)
+  if (/^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|169\.254\.)/.test(h)) return false;
+  return true;
+}
+
 // GET /api/machines — list all machines with online status
 router.get('/', async (_req: Request, res: Response) => {
   const machines = getMachines();
@@ -25,6 +39,10 @@ router.get('/', async (_req: Request, res: Response) => {
 router.post('/', (req: Request, res: Response) => {
   const { name, url } = req.body as { name: string; url: string };
   if (!name || !url) { res.status(400).json({ error: 'name and url are required' }); return; }
+  if (!isValidMachineUrl(url)) {
+    res.status(400).json({ error: 'Invalid machine URL. Must be http/https and not point to a private or reserved address.' });
+    return;
+  }
   const m = addMachine(name, url);
   res.status(201).json(m);
 });
