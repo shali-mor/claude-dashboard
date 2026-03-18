@@ -2,7 +2,7 @@
 
 A full-stack dashboard for monitoring your [Claude Code](https://claude.ai/code) usage — costs, active sessions, project breakdowns, monthly forecasts, and personalised cost-saving tips.
 
-![Claude Dashboard](https://img.shields.io/badge/stack-React%20%2B%20Express-blue)
+<img width="1153" height="1367" alt="image" src="https://github.com/user-attachments/assets/167d6f00-d33c-49af-9c55-c53a1df32199" />
 
 ## Features
 
