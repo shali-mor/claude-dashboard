@@ -5,6 +5,8 @@ export interface ActiveSession {
   project: string;
   startedAt: number;
   durationMs: number;
+  machineId: string;
+  machineName: string;
 }
 
 export interface DailyBucket {
@@ -55,6 +57,8 @@ export interface ProjectSummary {
   hasProjectConfig: boolean;
   byDay: DailyBucket[];
   toolCounts: Record<string, number>;
+  machineId: string;
+  machineName: string;
 }
 
 export interface ProjectDetail extends ProjectSummary {
@@ -105,4 +109,11 @@ export interface ReplayMessage {
   role: 'user' | 'assistant';
   timestamp?: string;
   blocks: ReplayBlock[];
+}
+
+export interface RemoteMachine {
+  id: string;
+  name: string;
+  url: string;
+  online: boolean;
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, ChevronDown, ChevronUp, GitBranch, Bot, Wrench, MessageSquare, Settings2, RefreshCw, Play } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, GitBranch, Bot, Wrench, MessageSquare, Settings2, RefreshCw, Play, Monitor } from 'lucide-react';
 import type { ProjectDetail as ProjectDetailType, ProjectConfig, ActiveSession } from '../types';
 import { formatCost, formatDate, formatDuration, formatTokens, shortModelName, modelBg, timeAgo } from '../utils/format';
 import { ProjectDailyChart } from './ProjectDailyChart';
@@ -11,6 +11,7 @@ type ChartMetric = 'cost' | 'sessions' | 'messages';
 
 interface Props {
   project: ProjectDetailType;
+  machineId: string;
   activeSession?: ActiveSession;
   onBack: () => void;
   onKill: (sessionId: string) => Promise<void>;
@@ -19,7 +20,7 @@ interface Props {
 const MODELS = ['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001'];
 const EFFORT_LEVELS = ['low', 'medium', 'high'];
 
-export function ProjectDetail({ project, activeSession, onBack, onKill }: Props) {
+export function ProjectDetail({ project, machineId, activeSession, onBack, onKill }: Props) {
   const [metric, setMetric] = useState<ChartMetric>('cost');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [configTab, setConfigTab] = useState(false);
@@ -28,7 +29,7 @@ export function ProjectDetail({ project, activeSession, onBack, onKill }: Props)
   const [killConfirm, setKillConfirm] = useState(false);
   const [replaySession, setReplaySession] = useState<string | null>(null);
 
-  const { data: config, refetch: refetchConfig } = useApi<ProjectConfig>(`/api/projects/${project.id}/config`);
+  const { data: config, refetch: refetchConfig } = useApi<ProjectConfig>(`/api/projects/${project.id}/config?machineId=${machineId}`);
   const [model, setModel] = useState('');
   const [effortLevel, setEffortLevel] = useState('');
 
@@ -42,7 +43,7 @@ export function ProjectDetail({ project, activeSession, onBack, onKill }: Props)
 
   const handleSaveConfig = async () => {
     setSaving(true);
-    await fetch(`/api/projects/${project.id}/config`, {
+    await fetch(`/api/projects/${project.id}/config?machineId=${machineId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: model || undefined, effortLevel: effortLevel || undefined }),
@@ -88,11 +89,17 @@ export function ProjectDetail({ project, activeSession, onBack, onKill }: Props)
 
       {/* Project title */}
       <div>
-        <div className="flex items-center gap-3 mb-1">
+        <div className="flex items-center gap-3 mb-1 flex-wrap">
           <h2 className="text-xl font-bold text-white">{project.name}</h2>
           {activeSession && (
             <span className="text-xs bg-emerald-400/10 text-emerald-400 px-2 py-0.5 rounded-full flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> active
+            </span>
+          )}
+          {project.machineName && (
+            <span className="flex items-center gap-1 text-[10px] text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">
+              <Monitor className="w-2.5 h-2.5" />
+              {project.machineName}
             </span>
           )}
         </div>

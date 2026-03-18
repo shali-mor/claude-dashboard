@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Save, Puzzle, ChevronDown, DollarSign } from 'lucide-react';
-import type { GlobalConfig } from '../types';
+import { Save, Puzzle, ChevronDown, DollarSign, Monitor, Lock, Trash2, Plus } from 'lucide-react';
+import type { GlobalConfig, RemoteMachine } from '../types';
 import { formatDate } from '../utils/format';
 
 interface Props {
   config: GlobalConfig;
   onSave: (updates: { model?: string; effortLevel?: string; budget?: { dailyLimit?: number; monthlyLimit?: number } }) => Promise<void>;
+  machines?: RemoteMachine[];
+  onMachinesChange?: () => void;
 }
 
 const MODELS = [
@@ -16,13 +18,40 @@ const MODELS = [
 
 const EFFORT_LEVELS = ['low', 'medium', 'high'];
 
-export function ConfigPanel({ config, onSave }: Props) {
+export function ConfigPanel({ config, onSave, machines, onMachinesChange }: Props) {
   const [model, setModel] = useState(config.model || '');
   const [effortLevel, setEffortLevel] = useState(config.effortLevel || '');
   const [dailyLimit, setDailyLimit] = useState(String(config.budget?.dailyLimit ?? ''));
   const [monthlyLimit, setMonthlyLimit] = useState(String(config.budget?.monthlyLimit ?? ''));
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // Remote machines state
+  const [newMachineName, setNewMachineName] = useState('');
+  const [newMachineUrl, setNewMachineUrl] = useState('');
+  const [addingMachine, setAddingMachine] = useState(false);
+
+  const handleAddMachine = async () => {
+    if (!newMachineName.trim() || !newMachineUrl.trim()) return;
+    setAddingMachine(true);
+    try {
+      await fetch('/api/machines', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newMachineName.trim(), url: newMachineUrl.trim() }),
+      });
+      setNewMachineName('');
+      setNewMachineUrl('');
+      onMachinesChange?.();
+    } finally {
+      setAddingMachine(false);
+    }
+  };
+
+  const handleRemoveMachine = async (id: string) => {
+    await fetch(`/api/machines/${id}`, { method: 'DELETE' });
+    onMachinesChange?.();
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -149,6 +178,85 @@ export function ConfigPanel({ config, onSave }: Props) {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Remote Machines */}
+      <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Monitor className="w-4 h-4 text-zinc-400" />
+          <h3 className="text-white font-medium">Remote Machines</h3>
+          {machines && (
+            <span className="text-xs text-zinc-600 bg-zinc-800 px-2 py-0.5 rounded-full">
+              {machines.length}
+            </span>
+          )}
+        </div>
+
+        {/* Machine list */}
+        <div className="space-y-2 mb-4">
+          {(!machines || machines.length === 0) && (
+            <p className="text-zinc-600 text-sm">No machines configured</p>
+          )}
+          {machines && machines.map(m => (
+            <div key={m.id} className="flex items-center justify-between py-2 border-b border-zinc-800 last:border-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Monitor className="w-3.5 h-3.5 text-zinc-500 flex-shrink-0" />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-white text-sm">{m.name}</p>
+                    {m.id === 'local' && (
+                      <Lock className="w-3 h-3 text-zinc-600 flex-shrink-0" />
+                    )}
+                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${m.online ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
+                    <span className={`text-xs ${m.online ? 'text-emerald-400' : 'text-zinc-600'}`}>
+                      {m.online ? 'online' : 'offline'}
+                    </span>
+                  </div>
+                  <p className="text-zinc-600 text-xs font-mono truncate">{m.url}</p>
+                </div>
+              </div>
+              {m.id !== 'local' && (
+                <button
+                  onClick={() => handleRemoveMachine(m.id)}
+                  className="p-1.5 text-zinc-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors flex-shrink-0"
+                  title="Remove machine"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Add machine form */}
+        <div className="pt-3 border-t border-zinc-800">
+          <p className="text-zinc-500 text-xs mb-2 uppercase tracking-wider">Add Machine</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+            <input
+              type="text"
+              placeholder="Name (e.g. MacBook Pro)"
+              value={newMachineName}
+              onChange={e => setNewMachineName(e.target.value)}
+              className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-500 placeholder-zinc-600"
+            />
+            <input
+              type="text"
+              placeholder="URL (e.g. http://100.x.x.x:3001)"
+              value={newMachineUrl}
+              onChange={e => setNewMachineUrl(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleAddMachine(); }}
+              className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-500 placeholder-zinc-600"
+            />
+          </div>
+          <button
+            onClick={handleAddMachine}
+            disabled={addingMachine || !newMachineName.trim() || !newMachineUrl.trim()}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white text-sm rounded-lg transition-colors disabled:opacity-40"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            {addingMachine ? 'Adding…' : 'Add Machine'}
+          </button>
+        </div>
       </div>
     </div>
   );

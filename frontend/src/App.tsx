@@ -10,9 +10,9 @@ import { FilterBar, type Filters, DEFAULT_FILTERS } from './components/FilterBar
 import { CostForecast } from './components/CostForecast';
 import { BudgetAlert } from './components/BudgetAlert';
 import { useApi, useWebSocket } from './hooks/useApi';
-import type { ActiveSession, ProjectSummary, ProjectDetail as ProjectDetailType, GlobalConfig } from './types';
+import type { ActiveSession, ProjectSummary, ProjectDetail as ProjectDetailType, GlobalConfig, RemoteMachine } from './types';
 
-type View = { type: 'overview' } | { type: 'config' } | { type: 'project'; id: string };
+type View = { type: 'overview' } | { type: 'config' } | { type: 'project'; id: string; machineId: string };
 
 function applyFilters(projects: ProjectSummary[], filters: Filters): ProjectSummary[] {
   return projects.filter(p => {
@@ -20,6 +20,11 @@ function applyFilters(projects: ProjectSummary[], filters: Filters): ProjectSumm
     if (filters.models.length > 0) {
       const match = filters.models.some(key => p.models.some(m => m.toLowerCase().includes(key)));
       if (!match) return false;
+    }
+
+    // Machine filter — project must belong to one of the selected machines
+    if (filters.machineIds.length > 0) {
+      if (!filters.machineIds.includes(p.machineId)) return false;
     }
 
     // Cost filter — use period cost when a date range is active, otherwise all-time
@@ -51,10 +56,12 @@ export default function App() {
   const { data: projects, loading: projectsLoading, refetch: refetchProjects } =
     useApi<ProjectSummary[]>('/api/projects', 60_000);
   const { data: config, refetch: refetchConfig } = useApi<GlobalConfig>('/api/config');
+  const { data: machines, refetch: refetchMachines } = useApi<RemoteMachine[]>('/api/machines');
 
   const projectId = view.type === 'project' ? view.id : null;
+  const projectMachineId = view.type === 'project' ? view.machineId : '';
   const { data: projectDetail } = useApi<ProjectDetailType>(
-    projectId ? `/api/projects/${projectId}` : ''
+    projectId ? `/api/projects/${projectId}?machineId=${projectMachineId}` : ''
   );
 
   useWebSocket<{ type: string; data: ActiveSession[] }>(
@@ -73,7 +80,9 @@ export default function App() {
   );
 
   const handleKill = async (sessionId: string) => {
-    await fetch(`/api/sessions/${sessionId}/kill`, { method: 'POST' });
+    const session = activeSessions.find(s => s.sessionId === sessionId);
+    const machineParam = session?.machineId ? `?machineId=${session.machineId}` : '';
+    await fetch(`/api/sessions/${sessionId}/kill${machineParam}`, { method: 'POST' });
   };
 
   const handleSaveGlobalConfig = async (updates: { model?: string; effortLevel?: string; budget?: { dailyLimit?: number; monthlyLimit?: number } }) => {
@@ -124,7 +133,12 @@ export default function App() {
         {view.type === 'config' && config && (
           <div className="space-y-2">
             <h2 className="text-zinc-400 text-xs font-medium uppercase tracking-wider mb-4">Global Settings</h2>
-            <ConfigPanel config={config} onSave={handleSaveGlobalConfig} />
+            <ConfigPanel
+              config={config}
+              onSave={handleSaveGlobalConfig}
+              machines={machines ?? undefined}
+              onMachinesChange={refetchMachines}
+            />
           </div>
         )}
 
@@ -132,6 +146,7 @@ export default function App() {
         {view.type === 'project' && projectDetail && (
           <ProjectDetail
             project={projectDetail}
+            machineId={projectMachineId}
             activeSession={activeSessionForProject(projectDetail)}
             onBack={() => setView({ type: 'overview' })}
             onKill={handleKill}
@@ -161,6 +176,7 @@ export default function App() {
                 onChange={setFilters}
                 totalCount={projects.length}
                 filteredCount={filteredProjects.length}
+                machines={machines ?? undefined}
               />
             )}
 
@@ -196,7 +212,7 @@ export default function App() {
                         project={matchedProject}
                         onKill={handleKill}
                         onViewProject={() => {
-                          if (matchedProject) setView({ type: 'project', id: matchedProject.id });
+                          if (matchedProject) setView({ type: 'project', id: matchedProject.id, machineId: matchedProject.machineId });
                         }}
                       />
                     );
@@ -239,7 +255,7 @@ export default function App() {
                         key={p.id}
                         project={p}
                         activeSession={activeSessionForProject(p)}
-                        onClick={() => setView({ type: 'project', id: p.id })}
+                        onClick={() => setView({ type: 'project', id: p.id, machineId: p.machineId })}
                       />
                     ))}
                   </div>

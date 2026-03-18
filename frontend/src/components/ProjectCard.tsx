@@ -1,6 +1,6 @@
 import type { ProjectSummary, ActiveSession } from '../types';
 import { formatCost, formatTokens, shortModelName, modelBg, timeAgo } from '../utils/format';
-import { Activity, MessageSquare, Cpu, ChevronRight } from 'lucide-react';
+import { Activity, MessageSquare, Cpu, ChevronRight, Monitor } from 'lucide-react';
 
 interface Props {
   project: ProjectSummary;
@@ -74,6 +74,16 @@ export function ProjectCard({ project, activeSession, onClick }: Props) {
         </div>
         <span className="text-xs text-zinc-600">{timeAgo(project.lastActiveAt)}</span>
       </div>
+
+      {/* Machine badge */}
+      {project.machineName && (
+        <div className="mt-2 flex justify-end">
+          <span className="flex items-center gap-1 text-[10px] text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">
+            <Monitor className="w-2.5 h-2.5" />
+            {project.machineName}
+          </span>
+        </div>
+      )}
     </button>
   );
 }

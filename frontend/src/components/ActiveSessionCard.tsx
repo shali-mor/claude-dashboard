@@ -37,7 +37,12 @@ export function ActiveSessionCard({ session, project, onKill, onViewProject }: P
         className="w-full px-4 py-3 flex items-center gap-2 text-left hover:bg-zinc-800/40 transition-colors"
       >
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
-        <span className="text-white font-medium text-sm truncate">{session.project}</span>
+        <div className="flex flex-col min-w-0">
+          <span className="text-white font-medium text-sm truncate">{session.project}</span>
+          {session.machineName && (
+            <span className="text-zinc-500 text-[10px]">on {session.machineName}</span>
+          )}
+        </div>
         <span className="ml-auto text-emerald-400 text-xs font-mono flex-shrink-0">{formatDuration(duration)}</span>
         <ChevronDown className={`w-3.5 h-3.5 text-zinc-500 flex-shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
       </button>

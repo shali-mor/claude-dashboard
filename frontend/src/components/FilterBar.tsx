@@ -4,15 +4,17 @@ export interface Filters {
   models: string[];       // empty = all
   minCost: number;        // 0 = no minimum
   lastDays: number | null; // null = all time
+  machineIds: string[];   // empty = all
 }
 
-export const DEFAULT_FILTERS: Filters = { models: [], minCost: 0, lastDays: null };
+export const DEFAULT_FILTERS: Filters = { models: [], minCost: 0, lastDays: null, machineIds: [] };
 
 interface Props {
   filters: Filters;
   onChange: (f: Filters) => void;
   totalCount: number;
   filteredCount: number;
+  machines?: Array<{ id: string; name: string }>;
 }
 
 const MODEL_OPTIONS = [
@@ -36,15 +38,22 @@ const DAY_OPTIONS = [
   { label: '90d', value: 90 },
 ];
 
-export function FilterBar({ filters, onChange, totalCount, filteredCount }: Props) {
+export function FilterBar({ filters, onChange, totalCount, filteredCount, machines }: Props) {
   const isDefault =
-    filters.models.length === 0 && filters.minCost === 0 && filters.lastDays === null;
+    filters.models.length === 0 && filters.minCost === 0 && filters.lastDays === null && filters.machineIds.length === 0;
 
   const toggleModel = (key: string) => {
     const next = filters.models.includes(key)
       ? filters.models.filter(m => m !== key)
       : [...filters.models, key];
     onChange({ ...filters, models: next });
+  };
+
+  const toggleMachine = (id: string) => {
+    const next = filters.machineIds.includes(id)
+      ? filters.machineIds.filter(m => m !== id)
+      : [...filters.machineIds, id];
+    onChange({ ...filters, machineIds: next });
   };
 
   return (
@@ -140,6 +149,34 @@ export function FilterBar({ filters, onChange, totalCount, filteredCount }: Prop
             })}
           </div>
         </div>
+
+        {/* Machine filter — only shown when 2+ machines are configured */}
+        {machines && machines.length >= 2 && (
+          <>
+            <div className="w-px bg-zinc-800 self-stretch" />
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-zinc-600 w-14">Machine</span>
+              <div className="flex gap-1.5">
+                {machines.map(m => {
+                  const on = filters.machineIds.includes(m.id);
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => toggleMachine(m.id)}
+                      className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
+                        on
+                          ? 'bg-sky-500/30 text-sky-300 border-sky-400 font-medium'
+                          : 'bg-sky-500/10 text-sky-400 border-sky-500/30 hover:border-sky-400'
+                      }`}
+                    >
+                      {m.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
