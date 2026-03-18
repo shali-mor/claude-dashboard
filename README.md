@@ -10,11 +10,12 @@ A full-stack dashboard for monitoring your [Claude Code](https://claude.ai/code)
 - **Cost trend chart** — stacked bar chart across all projects with per-project toggle
 - **Active session monitor** — live cards via WebSocket, with kill-session support
 - **Month forecast** — linear regression projection of end-of-month spend
-- **Cost-saving tips** — project-specific suggestions (model downgrades, context trimming) with copy-paste CLAUDE.md snippets and estimated dollar savings
+- **Cost-saving tips** — project-specific suggestions with estimated monthly savings: model downgrades (full Sonnet switch or Opus-for-planning/Sonnet-for-execution hybrid), context trimming, Haiku routing — each with a copy-paste snippet
 - **Session replay** — browse the full message history of any past session
 - **Tool usage chart** — breakdown of tool calls per project
 - **Budget alerts** — configurable daily/monthly spend limits with warning banners
-- **Filter bar** — filter projects by model, date range and minimum cost
+- **Filter bar** — filter projects by model, machine, date range and minimum cost
+- **Multi-machine aggregation** — add remote machines (via Tailscale or LAN); all projects and sessions aggregated into one view, with per-machine colour badges and offline detection
 - **Remote access** — binds to `0.0.0.0`; works over [Tailscale](https://tailscale.com)
 
 ## Architecture
@@ -23,8 +24,8 @@ A full-stack dashboard for monitoring your [Claude Code](https://claude.ai/code)
 claude-dashboard/
 ├── backend/          # Express + TypeScript API server (port 3001)
 │   └── src/
-│       ├── routes/   # /api/projects, /api/sessions, /api/config, /api/stats
-│       └── services/ # JSONL session parser, project aggregator, config manager
+│       ├── routes/   # /api/projects, /api/sessions, /api/config, /api/machines
+│       └── services/ # JSONL session parser, project aggregator, config manager, machine manager
 └── frontend/         # React 19 + Vite + Tailwind + recharts (port 5173)
     └── src/
         ├── components/
@@ -57,6 +58,18 @@ Both servers bind to `0.0.0.0`. If you have [Tailscale](https://tailscale.com) r
 ```
 http://<your-tailscale-ip>:5173
 ```
+
+## Multi-machine setup
+
+If you use Claude Code on multiple computers under the same account, you can aggregate all their data into one dashboard:
+
+1. Install and run the dashboard backend on each machine (`npm run dev` or `cd backend && npm run dev`)
+2. Connect each machine to the same Tailscale tailnet
+3. In the dashboard go to **Settings → Remote Machines → Add Machine**, enter a name and the machine's Tailscale URL (e.g. `http://100.x.x.x:3001`)
+
+Remote machine projects appear with a coloured badge. If a machine goes offline its last-known projects remain visible, grayed out with an **offline** indicator.
+
+Machine configuration is stored in `~/.claude/dashboard-config.json`.
 
 ## Configuration
 
