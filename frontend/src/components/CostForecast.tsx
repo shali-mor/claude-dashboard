@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { TrendingUp, Zap, Bot, Scissors, FileText, Copy, Check } from 'lucide-react';
 import type { ProjectSummary } from '../types';
 import { formatCost } from '../utils/format';
@@ -66,16 +66,16 @@ function computeStrategies(projects: ProjectSummary[]): Strategy[] {
     const usesHaiku = p.models.every(m => m.includes('haiku'));
 
     if (usesOpus) {
-      // Best saving: switch to Sonnet (~80% cheaper)
-      const est = monthly * 0.78;
+      const estFull = monthly * 0.78;
+      const estHybrid = monthly * 0.60;
       strategies.push({
         icon: Bot,
-        label: `${p.name}: Opus → Sonnet`,
-        saving: `~${formatCost(est)} by month end`,
-        savingUSD: est,
+        label: `${p.name}: cut Opus costs`,
+        saving: `up to ~${formatCost(estFull)} by month end`,
+        savingUSD: estFull,
         color: 'text-violet-400',
         project: p.name,
-        detail: `${p.name} is on track to spend ~${formatCost(monthly)} this month using Opus. Sonnet 4.6 is 5× cheaper with near-identical quality for most tasks. Switching saves ~${formatCost(est)} by month end. Add to CLAUDE.md:`,
+        detail: `${p.name} → ~${formatCost(monthly)}/month on Opus. Two options:\n\n① Switch fully to Sonnet 4.6 (5× cheaper, near-identical quality) — save ~${formatCost(estFull)} by month end.\n\n② Use Opus only for planning, Sonnet for execution — save ~${formatCost(estHybrid)} while keeping Opus reasoning for complex decisions (Shift+Tab to enter plan mode).`,
         snippet: `model: claude-sonnet-4-6`,
         snippetLabel: `${p.cwd}/CLAUDE.md`,
       });
@@ -158,7 +158,11 @@ function SnippetTip({ strategy, open }: { strategy: Strategy; open: boolean }) {
   return (
     <div className="absolute bottom-full left-0 mb-1 w-72 bg-zinc-800 border border-zinc-600 rounded-xl shadow-2xl z-50">
       <div className="px-3 pt-3 pb-2">
-        <p className="text-zinc-200 text-xs leading-relaxed mb-2">{strategy.detail}</p>
+        <div className="space-y-2 mb-2">
+          {strategy.detail.split('\n\n').map((block, i) => (
+            <p key={i} className="text-zinc-200 text-xs leading-relaxed">{block}</p>
+          ))}
+        </div>
         <div className="bg-zinc-900 rounded-lg border border-zinc-700 overflow-hidden">
           <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-zinc-700">
             <span className="text-zinc-500 text-[10px] font-mono truncate">{strategy.snippetLabel}</span>
@@ -180,11 +184,21 @@ function SnippetTip({ strategy, open }: { strategy: Strategy; open: boolean }) {
 
 function StrategyChip({ s }: { s: Strategy }) {
   const [open, setOpen] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleEnter = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    setOpen(true);
+  };
+  const handleLeave = () => {
+    closeTimer.current = setTimeout(() => setOpen(false), 200);
+  };
+
   return (
     <div
       className="relative"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
     >
       <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 cursor-default transition-colors border border-zinc-700/50">
         <s.icon className={`w-3 h-3 flex-shrink-0 ${s.color}`} />

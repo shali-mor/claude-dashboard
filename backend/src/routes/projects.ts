@@ -5,15 +5,23 @@ import { getMachines } from '../services/machineManager';
 
 const router = Router();
 
+// Cache last known projects per remote machine
+const remoteProjectCache = new Map<string, Record<string, unknown>[]>();
+
 async function fetchRemoteProjects(machineId: string, machineUrl: string, machineName: string) {
   try {
     const ctrl = new AbortController();
     setTimeout(() => ctrl.abort(), 5000);
     const r = await fetch(`${machineUrl}/api/projects`, { signal: ctrl.signal });
-    if (!r.ok) return [];
+    if (!r.ok) throw new Error('not ok');
     const projects = await r.json() as Record<string, unknown>[];
-    return projects.map(p => ({ ...p, machineId, machineName }));
+    const tagged = projects.map(p => ({ ...p, machineId, machineName, machineOnline: true }));
+    remoteProjectCache.set(machineId, tagged);
+    return tagged;
   } catch {
+    // Return cached projects marked offline
+    const cached = remoteProjectCache.get(machineId);
+    if (cached) return cached.map(p => ({ ...p, machineOnline: false }));
     return [];
   }
 }
@@ -29,6 +37,7 @@ router.get('/', async (_req: Request, res: Response) => {
         ...p,
         machineId: 'local',
         machineName: localMachine.name,
+        machineOnline: true,
       }))
     ),
     ...remotes.map(m => fetchRemoteProjects(m.id, m.url, m.name)),

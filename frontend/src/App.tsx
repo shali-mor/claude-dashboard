@@ -56,7 +56,7 @@ export default function App() {
   const { data: projects, loading: projectsLoading, refetch: refetchProjects } =
     useApi<ProjectSummary[]>('/api/projects', 60_000);
   const { data: config, refetch: refetchConfig } = useApi<GlobalConfig>('/api/config');
-  const { data: machines, refetch: refetchMachines } = useApi<RemoteMachine[]>('/api/machines');
+  const { data: machines, refetch: refetchMachines } = useApi<RemoteMachine[]>('/api/machines', 15_000);
 
   const projectId = view.type === 'project' ? view.id : null;
   const projectMachineId = view.type === 'project' ? view.machineId : '';
@@ -255,6 +255,7 @@ export default function App() {
                         key={p.id}
                         project={p}
                         activeSession={activeSessionForProject(p)}
+                        machineOnline={p.machineOnline}
                         onClick={() => setView({ type: 'project', id: p.id, machineId: p.machineId })}
                       />
                     ))}

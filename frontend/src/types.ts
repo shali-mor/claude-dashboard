@@ -59,6 +59,7 @@ export interface ProjectSummary {
   toolCounts: Record<string, number>;
   machineId: string;
   machineName: string;
+  machineOnline: boolean;
 }
 
 export interface ProjectDetail extends ProjectSummary {

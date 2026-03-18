@@ -2,9 +2,28 @@ import type { ProjectSummary, ActiveSession } from '../types';
 import { formatCost, formatTokens, shortModelName, modelBg, timeAgo } from '../utils/format';
 import { Activity, MessageSquare, Cpu, ChevronRight, Monitor } from 'lucide-react';
 
+const MACHINE_COLORS = [
+  'bg-violet-500/20 text-violet-300 border border-violet-500/40',
+  'bg-sky-500/20 text-sky-300 border border-sky-500/40',
+  'bg-orange-500/20 text-orange-300 border border-orange-500/40',
+  'bg-pink-500/20 text-pink-300 border border-pink-500/40',
+  'bg-teal-500/20 text-teal-300 border border-teal-500/40',
+];
+
+const machineColorCache = new Map<string, string>();
+
+function machineColor(machineId: string): string {
+  if (!machineColorCache.has(machineId)) {
+    const idx = machineColorCache.size % MACHINE_COLORS.length;
+    machineColorCache.set(machineId, MACHINE_COLORS[idx]);
+  }
+  return machineColorCache.get(machineId)!;
+}
+
 interface Props {
   project: ProjectSummary;
   activeSession?: ActiveSession;
+  machineOnline?: boolean;
   onClick: () => void;
 }
 
@@ -22,14 +41,16 @@ function costDot(cost: number): string {
   return 'bg-zinc-500';
 }
 
-export function ProjectCard({ project, activeSession, onClick }: Props) {
+export function ProjectCard({ project, activeSession, machineOnline = true, onClick }: Props) {
+  const offline = !machineOnline;
   const totalTokens = project.totalInputTokens + project.totalOutputTokens +
     project.totalCacheReadTokens + project.totalCacheCreationTokens;
 
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left bg-zinc-900 rounded-xl border p-5 transition-all cursor-pointer group ${costTier(project.totalCostUSD)}`}
+      disabled={offline}
+      className={`w-full text-left bg-zinc-900 rounded-xl border p-5 transition-all group ${offline ? 'opacity-40 grayscale cursor-not-allowed' : `cursor-pointer ${costTier(project.totalCostUSD)}`}`}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
@@ -76,10 +97,15 @@ export function ProjectCard({ project, activeSession, onClick }: Props) {
       </div>
 
       {/* Machine badge */}
-      {project.machineName && (
-        <div className="mt-2 flex justify-end">
-          <span className="flex items-center gap-1 text-[10px] text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">
-            <Monitor className="w-2.5 h-2.5" />
+      {project.machineName && project.machineId !== 'local' && (
+        <div className="mt-2 flex justify-end gap-1.5 items-center">
+          {offline && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/40 font-medium">
+              offline
+            </span>
+          )}
+          <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${machineColor(project.machineId)}`}>
+            <Monitor className="w-3 h-3" />
             {project.machineName}
           </span>
         </div>
