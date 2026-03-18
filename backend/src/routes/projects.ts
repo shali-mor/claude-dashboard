@@ -1,12 +1,20 @@
 import { Router, Request, Response } from 'express';
+import fs from 'fs';
+import path from 'path';
 import { getAllProjects, getProjectById, getSessionMessages, invalidateCache } from '../services/projectAggregator';
 import { getProjectConfig, updateProjectConfig } from '../services/projectConfig';
 import { getMachines } from '../services/machineManager';
 
 const router = Router();
 
-// Cache last known projects per remote machine
-const remoteProjectCache = new Map<string, Record<string, unknown>[]>();
+const CACHE_PATH = path.join(process.env.HOME || '', '.claude', 'dashboard-projects-cache.json');
+
+function readCache(): Record<string, Record<string, unknown>[]> {
+  try { return JSON.parse(fs.readFileSync(CACHE_PATH, 'utf8')); } catch { return {}; }
+}
+function writeCache(cache: Record<string, Record<string, unknown>[]>) {
+  try { fs.writeFileSync(CACHE_PATH, JSON.stringify(cache)); } catch {}
+}
 
 async function fetchRemoteProjects(machineId: string, machineUrl: string, machineName: string) {
   try {
@@ -16,11 +24,15 @@ async function fetchRemoteProjects(machineId: string, machineUrl: string, machin
     if (!r.ok) throw new Error('not ok');
     const projects = await r.json() as Record<string, unknown>[];
     const tagged = projects.map(p => ({ ...p, machineId, machineName, machineOnline: true }));
-    remoteProjectCache.set(machineId, tagged);
+    // Persist to disk cache
+    const cache = readCache();
+    cache[machineId] = tagged;
+    writeCache(cache);
     return tagged;
   } catch {
-    // Return cached projects marked offline
-    const cached = remoteProjectCache.get(machineId);
+    // Return disk-persisted cache marked offline
+    const cache = readCache();
+    const cached = cache[machineId];
     if (cached) return cached.map(p => ({ ...p, machineOnline: false }));
     return [];
   }
