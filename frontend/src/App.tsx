@@ -197,11 +197,16 @@ export default function App() {
 
 
             {/* Active sessions */}
-            {activeSessions.length > 0 && (
+            {activeSessions.length > 0 && (() => {
+              const filteredSessions = activeSessions.filter(s =>
+                filters.machineIds.length === 0 || filters.machineIds.includes(s.machineId)
+              );
+              if (filteredSessions.length === 0) return null;
+              return (
               <div>
                 <h2 className="text-zinc-400 text-xs font-medium uppercase tracking-wider mb-3">Active Now</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                  {activeSessions.map(s => {
+                  {filteredSessions.map(s => {
                     const matchedProject = projects?.find(
                       p => p.cwd === s.cwd || p.name === s.project
                     );
@@ -219,7 +224,8 @@ export default function App() {
                   })}
                 </div>
               </div>
-            )}
+              );
+            })()}
 
             {/* Projects grid */}
             <div className="space-y-4">
