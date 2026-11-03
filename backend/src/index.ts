@@ -13,7 +13,7 @@ import { getActiveSessions } from './services/sessionReader';
 import { getMachines } from './services/machineManager';
 
 const app = express();
-const PORT = 3001;
+const PORT = Number(process.env.PORT) || 3001;
 
 app.use(cors({ origin: true })); // allow all origins (Tailscale IPs, localhost)
 app.use(express.json());

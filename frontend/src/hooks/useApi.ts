@@ -31,7 +31,7 @@ export function useApi<T>(url: string, intervalMs?: number) {
 export function useWebSocket<T>(onMessage: (data: T) => void) {
   useEffect(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//localhost:3001`);
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
 
     ws.onmessage = (event) => {
       try {
